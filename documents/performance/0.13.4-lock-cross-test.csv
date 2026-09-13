@@ -1,0 +1,10 @@
+sequence,candidate,source_revision,mean_ns,ci95_lower_ns,ci95_upper_ns,screening_role
+1,std_mutex,502bfb6af7abdc1c09c1c7a5796136a8ab47ff9d,48295.308,47984.858,48816.372,baseline
+2,parking_lot_mutex,297ffe3e04fed5c65932722d92b84d1a134df48d,47724.903,47483.455,47994.946,candidate
+3,parking_lot_rwlock,debf7ca8f79d78fd43929bebf00fbc18b9cf190a,59072.030,58846.646,59314.175,candidate
+4,parking_lot_rwlock,debf7ca8f79d78fd43929bebf00fbc18b9cf190a,59191.406,59037.500,59348.026,candidate
+5,parking_lot_mutex,297ffe3e04fed5c65932722d92b84d1a134df48d,48797.902,48629.837,48973.948,candidate
+6,std_mutex,502bfb6af7abdc1c09c1c7a5796136a8ab47ff9d,48243.197,48090.608,48414.582,baseline
+7,parking_lot_mutex,297ffe3e04fed5c65932722d92b84d1a134df48d,47786.823,47637.476,47944.384,candidate
+8,std_mutex,502bfb6af7abdc1c09c1c7a5796136a8ab47ff9d,49426.972,49181.975,49691.296,baseline
+9,parking_lot_rwlock,debf7ca8f79d78fd43929bebf00fbc18b9cf190a,59039.473,58835.217,59244.315,candidate

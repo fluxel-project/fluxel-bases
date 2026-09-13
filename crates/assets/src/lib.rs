@@ -1,8 +1,9 @@
 //! Platform-neutral logical asset contracts for Fluxel.
 //!
-//! Version 0.13.2 implements the API-first contract with thread-safe
+//! The 0.13 series implements the API-first contract with thread-safe
 //! single-flight production, immutable snapshots, stale-identity rejection,
-//! and deterministic explicit cache collection.
+//! deterministic explicit cache collection, and retryable failed-completion
+//! recovery.
 
 #![forbid(unsafe_code)]
 

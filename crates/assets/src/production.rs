@@ -89,7 +89,7 @@ where
             value,
             resident_bytes,
         );
-        self.completed = true;
+        self.completed = result.is_ok();
         result
     }
 
@@ -101,7 +101,7 @@ where
             &self.cell,
             error,
         );
-        self.completed = true;
+        self.completed = result.is_ok();
         result
     }
 
@@ -112,7 +112,7 @@ where
             self.attempt,
             &self.cell,
         );
-        self.completed = true;
+        self.completed = result.is_ok();
         result
     }
 }

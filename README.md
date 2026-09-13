@@ -44,7 +44,8 @@ The 0.13 series extracts the first demonstrated crate:
 - `fluxel-assets`: typed logical identity, immutable content generations,
   producer coordination, and deterministic CPU-cache policy.
 
-Version 0.13.3 adds a reproducible benchmark suite and baseline decision to the
+Version 0.13.4 closes the independent review's failed-completion lifecycle bug
+while retaining 0.13.3's reproducible benchmark suite and baseline decision for the
 implemented API-first declarations, numbered examples, and public-only contract
 tests. See the accepted [architecture](documents/design-assets.md) and
 [performance plan](documents/performance-plan.md). GPU residency remains owned

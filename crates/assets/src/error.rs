@@ -26,6 +26,9 @@ pub enum AssetError {
         attempt: u64,
     },
     /// The operation requires an active production attempt.
+    ///
+    /// Retained for 0.13 API compatibility even though the current safe
+    /// producer-capability surface does not construct this variant.
     NoActiveProduction,
     /// A producer capability no longer names the active attempt.
     ExpiredProducer {
@@ -35,6 +38,9 @@ pub enum AssetError {
         expected_attempt: Option<u64>,
     },
     /// The same producer permit was completed more than once.
+    ///
+    /// Retained for 0.13 API compatibility even though consuming completion
+    /// methods make this state unreachable through the safe public API.
     ProducerAlreadyCompleted,
     /// Resident byte accounting exceeded `u64`.
     ResidentBytesOverflow,
