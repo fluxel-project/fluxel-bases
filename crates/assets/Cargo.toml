@@ -1,0 +1,11 @@
+[package]
+name = "fluxel-assets"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Typed logical asset identity, production coordination, and CPU cache policy for Fluxel"
+
+[dependencies]
+

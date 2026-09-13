@@ -39,8 +39,27 @@ depend on its demonstrated contracts.
 
 ## Status and roadmap
 
-The repository establishes ownership boundaries before all of their internal
-crates are extracted. New crates require a reviewed, demonstrated need rather
-than a reserved name alone. Ecosystem stages, ownership, and extraction gates
-are maintained in the [Fluxel roadmap](https://github.com/fluxel-project/.github/blob/main/ROADMAP.md)
+The 0.13 series extracts the first demonstrated crate:
+
+- `fluxel-assets`: typed logical identity, immutable content generations,
+  producer coordination, and deterministic CPU-cache policy.
+
+Version 0.13.0 freezes its [architecture](documents/design-assets.md) before the
+public API and implementation are introduced. GPU residency remains owned by
+`fluxel-rendering` and is the consumer planned for 0.14.
+
+New crates still require a reviewed, demonstrated need rather than a reserved
+name alone. Ecosystem stages, ownership, and extraction gates are maintained in
+the [Fluxel roadmap](https://github.com/fluxel-project/.github/blob/main/ROADMAP.md)
 and [ecosystem architecture](https://github.com/fluxel-project/.github/blob/main/ECOSYSTEM_ARCHITECTURE.md).
+
+## Development
+
+The workspace MSRV is Rust 1.87. The standard local gates are:
+
+```console
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-targets --all-features --locked
+cargo doc --workspace --all-features --no-deps --locked
+```
