@@ -6,7 +6,6 @@ struct Shader;
 impl AssetKind for Shader {}
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn first_acquirer_is_producer_and_concurrent_acquirer_is_waiter() {
     let store = AssetStore::<Shader, Vec<u8>, String>::new();
     let handle = store.create().unwrap();
@@ -23,7 +22,6 @@ fn first_acquirer_is_producer_and_concurrent_acquirer_is_waiter() {
 }
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn replacement_coordinates_separately_from_existing_snapshot() {
     let store = AssetStore::<Shader, Vec<u8>, String>::new();
     let handle = store.create().unwrap();

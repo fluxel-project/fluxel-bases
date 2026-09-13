@@ -38,6 +38,10 @@ pub enum AssetError {
     ProducerAlreadyCompleted,
     /// Resident byte accounting exceeded `u64`.
     ResidentBytesOverflow,
+    /// A slot, content, attempt, or store generation could not advance.
+    GenerationExhausted,
+    /// Internal synchronization was poisoned by a panic.
+    SynchronizationPoisoned,
     /// The store was dropped before a waiter or producer completed.
     StoreClosed,
 }
@@ -74,6 +78,10 @@ impl fmt::Display for AssetError {
                 formatter.write_str("producer permit was already completed")
             }
             Self::ResidentBytesOverflow => formatter.write_str("resident byte accounting overflow"),
+            Self::GenerationExhausted => formatter.write_str("asset generation space exhausted"),
+            Self::SynchronizationPoisoned => {
+                formatter.write_str("asset store synchronization was poisoned")
+            }
             Self::StoreClosed => formatter.write_str("asset store is closed"),
         }
     }

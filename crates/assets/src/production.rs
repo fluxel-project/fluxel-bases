@@ -1,10 +1,11 @@
 //! Single-producer capabilities and executor-neutral observation.
 
 use std::future::Future;
-use std::marker::PhantomData;
 use std::pin::Pin;
+use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
 
+use crate::runtime::{AttemptCell, StoreInner};
 use crate::{
     AssetError, AssetId, AssetKind, AssetSnapshot, AttemptGeneration, ProductionFailure,
     ResidentBytes,
@@ -52,10 +53,17 @@ pub enum ProductionOutcome<K: AssetKind, V, E> {
 pub struct ProducerPermit<K: AssetKind, V, E> {
     pub(crate) id: AssetId<K>,
     pub(crate) attempt: AttemptGeneration,
-    pub(crate) marker: PhantomData<fn() -> (V, E)>,
+    pub(crate) store: Weak<StoreInner<K, V, E>>,
+    pub(crate) cell: Arc<AttemptCell<K, V, E>>,
+    pub(crate) completed: bool,
 }
 
-impl<K: AssetKind, V, E> ProducerPermit<K, V, E> {
+impl<K, V, E> ProducerPermit<K, V, E>
+where
+    K: AssetKind,
+    V: Send + Sync + 'static,
+    E: Send + Sync + 'static,
+{
     /// Returns the identity being produced.
     #[must_use]
     pub const fn id(&self) -> AssetId<K> {
@@ -70,21 +78,55 @@ impl<K: AssetKind, V, E> ProducerPermit<K, V, E> {
 
     /// Atomically commits immutable content and caller-reported resident bytes.
     pub fn commit(
-        self,
-        _value: V,
-        _resident_bytes: ResidentBytes,
+        mut self,
+        value: V,
+        resident_bytes: ResidentBytes,
     ) -> Result<AssetSnapshot<K, V>, AssetError> {
-        unimplemented!("fluxel-assets runtime is implemented in 0.13.2")
+        let result = self.store.upgrade().ok_or(AssetError::StoreClosed)?.commit(
+            self.id,
+            self.attempt,
+            &self.cell,
+            value,
+            resident_bytes,
+        );
+        self.completed = true;
+        result
     }
 
     /// Atomically commits a typed production failure.
-    pub fn fail(self, _error: E) -> Result<ProductionFailure<K, V, E>, AssetError> {
-        unimplemented!("fluxel-assets runtime is implemented in 0.13.2")
+    pub fn fail(mut self, error: E) -> Result<ProductionFailure<K, V, E>, AssetError> {
+        let result = self.store.upgrade().ok_or(AssetError::StoreClosed)?.fail(
+            self.id,
+            self.attempt,
+            &self.cell,
+            error,
+        );
+        self.completed = true;
+        result
     }
 
     /// Explicitly cancels the active attempt.
-    pub fn cancel(self) -> Result<(), AssetError> {
-        unimplemented!("fluxel-assets runtime is implemented in 0.13.2")
+    pub fn cancel(mut self) -> Result<(), AssetError> {
+        let result = self.store.upgrade().ok_or(AssetError::StoreClosed)?.cancel(
+            self.id,
+            self.attempt,
+            &self.cell,
+        );
+        self.completed = true;
+        result
+    }
+}
+
+impl<K, V, E> Drop for ProducerPermit<K, V, E>
+where
+    K: AssetKind,
+{
+    fn drop(&mut self) {
+        if !self.completed {
+            if let Some(store) = self.store.upgrade() {
+                let _ = store.cancel(self.id, self.attempt, &self.cell);
+            }
+        }
     }
 }
 
@@ -93,7 +135,7 @@ impl<K: AssetKind, V, E> ProducerPermit<K, V, E> {
 pub struct ProductionWaiter<K: AssetKind, V, E> {
     pub(crate) id: AssetId<K>,
     pub(crate) attempt: AttemptGeneration,
-    pub(crate) marker: PhantomData<fn() -> (V, E)>,
+    pub(crate) cell: Arc<AttemptCell<K, V, E>>,
 }
 
 impl<K: AssetKind, V, E> ProductionWaiter<K, V, E> {
@@ -114,6 +156,34 @@ impl<K: AssetKind, V, E> Future for ProductionWaiter<K, V, E> {
     type Output = Result<ProductionOutcome<K, V, E>, AssetError>;
 
     fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
-        unimplemented!("fluxel-assets runtime is implemented in 0.13.2")
+        self.cell.poll(_context)
+    }
+}
+
+impl<K: AssetKind, V, E> Clone for ProductionWaiter<K, V, E> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            attempt: self.attempt,
+            cell: Arc::clone(&self.cell),
+        }
+    }
+}
+
+impl<K: AssetKind, V, E> Clone for ProductionOutcome<K, V, E> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Ready(snapshot) => Self::Ready(snapshot.clone()),
+            Self::Failed(failure) => Self::Failed(failure.clone()),
+            Self::Cancelled {
+                id,
+                attempt,
+                previous,
+            } => Self::Cancelled {
+                id: *id,
+                attempt: *attempt,
+                previous: previous.clone(),
+            },
+        }
     }
 }

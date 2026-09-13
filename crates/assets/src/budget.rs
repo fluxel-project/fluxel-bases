@@ -43,9 +43,9 @@ impl CacheBudget {
 /// One exact content generation removed from the ready cache.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct EvictedAsset<K: AssetKind> {
-    id: AssetId<K>,
-    generation: ContentGeneration,
-    bytes: ResidentBytes,
+    pub(crate) id: AssetId<K>,
+    pub(crate) generation: ContentGeneration,
+    pub(crate) bytes: ResidentBytes,
 }
 
 impl<K: AssetKind> EvictedAsset<K> {

@@ -6,7 +6,6 @@ struct Mesh;
 impl AssetKind for Mesh {}
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn weak_upgrade_requires_a_live_store_identity() {
     let store = AssetStore::<Mesh, Vec<u8>, String>::new();
     let handle = store.create().unwrap();
@@ -20,7 +19,6 @@ fn weak_upgrade_requires_a_live_store_identity() {
 }
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn snapshots_pin_the_observed_value_not_a_mutable_slot() {
     let store = AssetStore::<Mesh, Vec<u8>, String>::new();
     let handle = store.create().unwrap();

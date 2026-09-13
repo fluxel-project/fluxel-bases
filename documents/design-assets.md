@@ -103,8 +103,11 @@ currently active permit. Late, foreign, stale, and already-completed permits
 return structured errors and have no side effects.
 
 Dropping an unfinished permit marks that attempt cancelled and wakes observers;
-it does not choose a retry policy. Waiters support caller-driven polling and a
-standard-library `Future` borrowed from the store. The crate registers wakers
+it does not choose a retry policy. Cancellation without previous content returns
+the public identity to `Missing`; cancellation of a replacement restores the
+previous `Ready` generation. Exact-attempt waiters observe `Cancelled` in both
+cases. Waiters are standard-library `Future` capabilities tied to that exact
+attempt, not to an executor. The crate registers wakers
 but owns no thread, queue, timer, executor, I/O operation, or scheduling policy.
 
 ## CPU cache and budget
@@ -206,4 +209,3 @@ adds numbered examples, public-only contract tests, and declarations; 0.13.2
 implements those frozen contracts; 0.13.3 adds representative benchmarks and a
 reproducible baseline/decision. A 0.13.4 exists only if independent review
 finds a material contract or evidence defect.
-

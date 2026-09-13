@@ -6,7 +6,6 @@ struct Font;
 impl AssetKind for Font {}
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn observation_never_starts_production() {
     let store = AssetStore::<Font, Vec<u8>, String>::new();
     let handle = store.create().unwrap();
@@ -22,7 +21,6 @@ fn observation_never_starts_production() {
 }
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn retry_is_explicit_after_a_failed_attempt() {
     let store = AssetStore::<Font, Vec<u8>, String>::new();
     let handle = store.create().unwrap();

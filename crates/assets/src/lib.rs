@@ -1,8 +1,8 @@
 //! Platform-neutral logical asset contracts for Fluxel.
 //!
-//! Version 0.13.1 exposes the API-first contract. Its behavioral examples and
-//! tests are executable specifications for the 0.13.2 implementation; this
-//! release does not yet provide the runtime.
+//! Version 0.13.2 implements the API-first contract with thread-safe
+//! single-flight production, immutable snapshots, stale-identity rejection,
+//! and deterministic explicit cache collection.
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +10,7 @@ mod budget;
 mod error;
 mod identity;
 mod production;
+mod runtime;
 mod state;
 mod store;
 

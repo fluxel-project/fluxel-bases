@@ -6,7 +6,6 @@ struct Audio;
 impl AssetKind for Audio {}
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn producer_failure_is_observable_without_implicit_retry() {
     let store = AssetStore::<Audio, Vec<u8>, String>::new();
     let handle = store.create().unwrap();
@@ -27,7 +26,6 @@ fn producer_failure_is_observable_without_implicit_retry() {
 }
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn cancelled_permit_is_a_structured_terminal_attempt() {
     let store = AssetStore::<Audio, Vec<u8>, String>::new();
     let handle = store.create().unwrap();

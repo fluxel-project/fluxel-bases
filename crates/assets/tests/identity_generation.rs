@@ -6,7 +6,6 @@ struct Image;
 impl AssetKind for Image {}
 
 #[test]
-#[ignore = "implemented in 0.13.2"]
 fn committed_snapshot_keeps_its_identity_and_generation() {
     let store = AssetStore::<Image, Vec<u8>, String>::new();
     let handle = store.create().unwrap();
