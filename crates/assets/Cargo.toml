@@ -9,3 +9,13 @@ description = "Typed logical asset identity, production coordination, and CPU ca
 
 [dependencies]
 
+[dev-dependencies]
+criterion = { version = "=0.5.1", default-features = false }
+
+[[bench]]
+name = "asset_store"
+harness = false
+
+[[bench]]
+name = "allocations"
+harness = false

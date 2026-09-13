@@ -44,10 +44,11 @@ The 0.13 series extracts the first demonstrated crate:
 - `fluxel-assets`: typed logical identity, immutable content generations,
   producer coordination, and deterministic CPU-cache policy.
 
-Version 0.13.2 implements the API-first declarations, numbered examples, and
-public-only contract tests over the accepted
-[architecture](documents/design-assets.md). GPU residency remains owned by
-`fluxel-rendering` and is the consumer planned for 0.14.
+Version 0.13.3 adds a reproducible benchmark suite and baseline decision to the
+implemented API-first declarations, numbered examples, and public-only contract
+tests. See the accepted [architecture](documents/design-assets.md) and
+[performance plan](documents/performance-plan.md). GPU residency remains owned
+by `fluxel-rendering` and is the consumer planned for 0.14.
 
 New crates still require a reviewed, demonstrated need rather than a reserved
 name alone. Ecosystem stages, ownership, and extraction gates are maintained in
