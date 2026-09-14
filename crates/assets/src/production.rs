@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
 
-use crate::runtime::{AttemptCell, StoreInner};
+use crate::runtime::{AttemptCell, StoreInner, WaiterRegistration};
 use crate::{
     AssetError, AssetId, AssetKind, AssetSnapshot, AttemptGeneration, ProductionFailure,
     ResidentBytes,
@@ -131,11 +131,16 @@ where
 }
 
 /// Shared observer for one exact in-progress attempt.
+///
+/// Every waiter, including every clone, holds its own registration slot in the
+/// attempt's registry; dropping the waiter deregisters that slot so a pending
+/// producer cannot retain the waiter's waker.
 #[must_use = "a waiter must be polled or awaited to observe completion"]
 pub struct ProductionWaiter<K: AssetKind, V, E> {
     pub(crate) id: AssetId<K>,
     pub(crate) attempt: AttemptGeneration,
     pub(crate) cell: Arc<AttemptCell<K, V, E>>,
+    pub(crate) registration: WaiterRegistration,
 }
 
 impl<K: AssetKind, V, E> ProductionWaiter<K, V, E> {
@@ -156,7 +161,7 @@ impl<K: AssetKind, V, E> Future for ProductionWaiter<K, V, E> {
     type Output = Result<ProductionOutcome<K, V, E>, AssetError>;
 
     fn poll(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Self::Output> {
-        self.cell.poll(_context)
+        self.cell.poll(&self.registration, _context)
     }
 }
 
@@ -166,7 +171,14 @@ impl<K: AssetKind, V, E> Clone for ProductionWaiter<K, V, E> {
             id: self.id,
             attempt: self.attempt,
             cell: Arc::clone(&self.cell),
+            registration: self.cell.register(),
         }
+    }
+}
+
+impl<K: AssetKind, V, E> Drop for ProductionWaiter<K, V, E> {
+    fn drop(&mut self) {
+        self.cell.deregister(&self.registration);
     }
 }
 

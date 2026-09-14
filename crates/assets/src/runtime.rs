@@ -1,6 +1,6 @@
 //! Private synchronized state machine for logical identities and cache values.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::task::{Context, Poll, Waker};
@@ -17,17 +17,126 @@ static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 
 type AttemptResult<K, V, E> = Result<ProductionOutcome<K, V, E>, AssetError>;
 
+/// One waiter's replaceable waker slot.
+///
+/// Each [`ProductionWaiter`] owns exactly one slot for its whole lifetime, so
+/// clones and repeated polls never share storage and dropping one waiter can
+/// only release its own registered waker. The registry never runs waiter or
+/// executor code while a slot is locked; `wake` happens strictly outside.
+struct WakerSlot {
+    waker: Mutex<Option<Waker>>,
+}
+
+impl WakerSlot {
+    fn new() -> Self {
+        Self {
+            waker: Mutex::new(None),
+        }
+    }
+
+    /// Stores `waker` unless the slot already holds an equivalent waker.
+    fn record(&self, waker: &Waker) {
+        let mut current = match self.waker.lock() {
+            Ok(current) => current,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        if !current
+            .as_ref()
+            .is_some_and(|existing| existing.will_wake(waker))
+        {
+            *current = Some(waker.clone());
+        }
+    }
+
+    /// Takes the registered waker, if any.
+    fn take(&self) -> Option<Waker> {
+        let mut current = match self.waker.lock() {
+            Ok(current) => current,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        current.take()
+    }
+}
+
+/// A waiter's exclusive registration in one [`AttemptCell`] registry.
+///
+/// `key` is never reused, so deregistration removes exactly this waiter's slot
+/// and cannot disturb a sibling waiter registered for the same attempt.
+pub(crate) struct WaiterRegistration {
+    key: u64,
+    slot: Arc<WakerSlot>,
+}
+
+struct WaiterRegistry {
+    next_key: u64,
+    slots: HashMap<u64, Arc<WakerSlot>>,
+}
+
+impl WaiterRegistry {
+    fn new() -> Self {
+        Self {
+            next_key: 0,
+            slots: HashMap::new(),
+        }
+    }
+
+    fn register(&mut self) -> WaiterRegistration {
+        let key = self
+            .next_key
+            .checked_add(1)
+            .expect("fluxel-assets waiter registration space exhausted");
+        self.next_key = key;
+        let slot = Arc::new(WakerSlot::new());
+        self.slots.insert(key, Arc::clone(&slot));
+        WaiterRegistration { key, slot }
+    }
+
+    fn deregister(&mut self, key: u64) {
+        self.slots.remove(&key);
+    }
+
+    /// Takes every registered waker so callers can wake outside all locks.
+    ///
+    /// The whole registry is drained: once an attempt completes, no further
+    /// wakeup can ever be needed and leftover slots would only leak.
+    fn take_wakers(&mut self) -> Vec<Waker> {
+        std::mem::take(&mut self.slots)
+            .into_values()
+            .filter_map(|slot| slot.take())
+            .collect()
+    }
+}
+
 pub(crate) struct AttemptCell<K: AssetKind, V, E> {
     outcome: Mutex<Option<AttemptResult<K, V, E>>>,
-    wakers: Mutex<Vec<Waker>>,
+    registry: Mutex<WaiterRegistry>,
 }
 
 impl<K: AssetKind, V, E> AttemptCell<K, V, E> {
     fn new() -> Self {
         Self {
             outcome: Mutex::new(None),
-            wakers: Mutex::new(Vec::new()),
+            registry: Mutex::new(WaiterRegistry::new()),
         }
+    }
+
+    fn lock_registry(&self) -> MutexGuard<'_, WaiterRegistry> {
+        match self.registry.lock() {
+            Ok(registry) => registry,
+            // The registry never runs foreign code under its lock, so recovery
+            // keeps wakeups flowing instead of losing them to a poisoned lock.
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
+
+    /// Creates the calling waiter's exclusive waker slot.
+    pub(crate) fn register(&self) -> WaiterRegistration {
+        self.lock_registry().register()
+    }
+
+    /// Removes a waiter's slot and drops its registered waker, if any.
+    pub(crate) fn deregister(&self, registration: &WaiterRegistration) {
+        self.lock_registry().deregister(registration.key);
     }
 
     fn complete(&self, outcome: Result<ProductionOutcome<K, V, E>, AssetError>) {
@@ -40,10 +149,7 @@ impl<K: AssetKind, V, E> AttemptCell<K, V, E> {
         }
         *result = Some(outcome);
         drop(result);
-        let wakers = match self.wakers.lock() {
-            Ok(mut wakers) => std::mem::take(&mut *wakers),
-            Err(poisoned) => std::mem::take(&mut *poisoned.into_inner()),
-        };
+        let wakers = self.lock_registry().take_wakers();
         for waker in wakers {
             waker.wake();
         }
@@ -51,6 +157,7 @@ impl<K: AssetKind, V, E> AttemptCell<K, V, E> {
 
     pub(crate) fn poll(
         &self,
+        registration: &WaiterRegistration,
         context: &mut Context<'_>,
     ) -> Poll<Result<ProductionOutcome<K, V, E>, AssetError>> {
         let result = match self.outcome.lock() {
@@ -61,14 +168,7 @@ impl<K: AssetKind, V, E> AttemptCell<K, V, E> {
             return Poll::Ready(outcome.clone());
         }
         drop(result);
-        let mut wakers = match self.wakers.lock() {
-            Ok(wakers) => wakers,
-            Err(_) => return Poll::Ready(Err(AssetError::SynchronizationPoisoned)),
-        };
-        if !wakers.iter().any(|waker| waker.will_wake(context.waker())) {
-            wakers.push(context.waker().clone());
-        }
-        drop(wakers);
+        registration.slot.record(context.waker());
         let result = match self.outcome.lock() {
             Ok(result) => result,
             Err(_) => return Poll::Ready(Err(AssetError::SynchronizationPoisoned)),
@@ -267,6 +367,7 @@ impl<K: AssetKind, V, E> StoreInner<K, V, E> {
             id,
             attempt,
             cell: Arc::clone(cell),
+            registration: cell.register(),
         }
     }
 
