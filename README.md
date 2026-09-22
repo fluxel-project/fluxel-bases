@@ -47,19 +47,24 @@ This repository is a leaf ownership boundary: it must not depend on
 `fluxel-rendering`, `fluxel-host`, or `fluxel-jsbridge`. Those repositories may
 depend on its demonstrated contracts.
 
-## Status and roadmap
+## Status and plan
 
-The 0.13 series extracts the first demonstrated crate:
+The first demonstrated shared crate is:
 
 - `fluxel-assets`: typed logical identity, immutable content generations,
   producer coordination, and deterministic CPU-cache policy.
 
-Version 0.13.4 closes the independent review's failed-completion lifecycle bug
-while retaining 0.13.3's reproducible benchmark suite and baseline decision for the
-implemented API-first declarations, numbered examples, and public-only contract
-tests. See the accepted [architecture](documents/design-assets.md) and
-[performance plan](documents/performance-plan.md). GPU residency remains owned
-by `fluxel-rendering` and is the consumer planned for 0.14.
+The implemented asset contract includes public-only contract tests, numbered
+examples, reproducible benchmark evidence, and the independently reviewed
+failed-completion lifecycle correction. See the accepted
+[architecture](documents/design-assets.md), [performance plan](documents/performance-plan.md),
+and [recorded baseline](documents/performance/asset-store-baseline.md).
+
+GPU residency remains owned by `fluxel-rendering`. It consumes a logical asset
+identity plus immutable content generation to select a device-specific
+realization, but it owns upload, GPU lifetime, completion-safe retirement, and
+device-loss recovery. A content generation is neither a GPU-residency version
+nor a device generation.
 
 New crates still require a reviewed, demonstrated need rather than a reserved
 name alone. Ecosystem stages, ownership, and extraction gates are maintained in

@@ -1,6 +1,6 @@
-# 0.13.3 performance decision plan
+# Asset-store performance decision plan
 
-This document defines the measurement and release decision for the asset
+This document defines the measurement and retention decision for the asset
 resource-manager implementation.  It is a plan, not a performance claim: no
 result is implied until measurements are recorded against the candidate source
 revision.
@@ -45,7 +45,7 @@ The primary representative case models CPU-side identity and generation
 resolution in a stable renderer-facing live set; the fixed stride walks the
 prepared table deterministically. It intentionally does not model file I/O, decoding, GPU upload,
 scheduler contention, or application-specific asset eviction policy; those are
-outside the 0.13 asset-manager contract.
+outside the asset-manager contract.
 
 ## Measurement protocol
 
@@ -79,7 +79,7 @@ machines, toolchains, or input definitions are separate baselines.
 ## Candidate funnel
 
 Only evidence-backed candidates enter the funnel, with at most one to three
-independent candidates in this release stage.
+independent candidates in one evaluation stage.
 
 1. State the measured cost, the hypothesis, the narrowly scoped change, API
    impact, semantic risk, and expected representative benefit.
@@ -139,8 +139,8 @@ prevented a decision and the condition required to retest.
 
 ## Stop condition
 
-0.13.3 is complete when the current implementation has a reproducible formal
-baseline and a recorded decision: retain that baseline, or retain a sufficiently
-validated winner.  It is expressly valid—and preferred over speculative
-complexity—to finish with no optimization when no candidate clears the
-noise-aware representative-workload threshold.
+An evaluation milestone is complete when the current implementation has a
+reproducible formal baseline and a recorded decision: retain that baseline, or
+retain a sufficiently validated winner. It is expressly valid—and preferred
+over speculative complexity—to finish with no optimization when no candidate
+clears the noise-aware representative-workload threshold.

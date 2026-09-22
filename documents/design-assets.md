@@ -1,6 +1,6 @@
 # Fluxel logical asset core
 
-Status: accepted architecture for `fluxel-assets` 0.13
+Status: accepted architecture for `fluxel-assets`
 
 ## Purpose
 
@@ -10,10 +10,9 @@ cache collection. It lets independent consumers share one logical asset and
 one in-progress production attempt without teaching the core how bytes are
 located, decoded, scheduled, uploaded, or rendered.
 
-The first demonstrated consumer is rendering residency in Fluxel Rendering
-0.14. That consumer needs a stable pair of logical identity and immutable
-content generation before it can safely key a device-specific realization.
-The dependency direction is therefore:
+The first demonstrated consumer is rendering residency. It needs a stable pair
+of logical identity and immutable content generation before it can safely key a
+device-specific realization. The dependency direction is therefore:
 
 ```text
 caller-owned source/loader policy
@@ -45,11 +44,18 @@ The design deliberately separates identities that are often conflated:
 GPU resource identity and device generation form a fourth, separate domain
 owned by Rendering. They never appear in this crate's key or state.
 
-Domain APIs must preserve this boundary. For example, a material payload may
-be typed with a material marker and referred to as `AssetId<Material>`, but it
-must not introduce a second logical `MaterialAssetId` or an independent
-material-generation counter. A renderer can add realization metadata to the
-existing logical identity and content generation; it cannot replace them.
+Domain APIs must preserve this boundary. Geometry and material handles are
+conceptual typed logical references, not an invitation to mint a renderer-local
+asset identity domain. When Fluxel assets back them, their durable identity is
+`AssetId<GeometryAsset>` or `AssetId<MaterialAsset>` together with the observed
+`ContentGeneration`; a `GeometryHandle` or `MaterialHandle` must preserve that
+pair rather than wrap an unrelated integer identity or generation counter.
+
+A material instance is distinct: it may have renderer-domain identity for
+per-instance parameter selection because material-asset identity and material
+instance identity answer different questions. That instance identity must
+refer back to the material asset identity and content generation it realizes;
+it cannot replace either one.
 
 ## Typed identity and ownership
 
@@ -174,25 +180,26 @@ Caller production failures are typed values, not flattened strings. Query and
 mutation errors do not trigger loading, retry, collection, or removal as a side
 effect.
 
-## Rendering 0.14 handoff
+## Rendering handoff
 
 Frame preparation may obtain an immutable snapshot and construct the
 rendering-owned key:
 
 ```text
-(AssetId<K>, ContentGeneration, RhiDeviceGeneration)
+(AssetId<K>, ContentGeneration, DeviceIdentity, DeviceGeneration)
 ```
 
 Rendering resolves that key to a persistent GPU realization before graph
-execution and imports the prepared resource into RenderGraph. A render pass
-does not look up an asset store. Submission completion, last GPU use, upload
-commit, retirement, and device-loss recreation remain Rendering/RHI concerns.
-Device loss discards only the GPU generation; the logical snapshot remains
-available to rebuild residency.
+execution and supplies the prepared resource through its private bridge. A
+render pass does not look up an asset store. Submission completion, last GPU
+use, upload commit, retirement, and device-loss recreation remain
+Rendering/RHI concerns. Device loss invalidates device-specific realizations;
+the logical snapshot and its content generation remain available to rebuild
+them for the next device generation.
 
 ## Non-goals
 
-0.13 does not define:
+This crate does not define:
 
 - filesystem, network, URL, package, or embedded-resource lookup;
 - decoding, transcoding, hot reload, retry timing, priorities, or cancellation
@@ -204,14 +211,13 @@ available to rebuild residency.
 - scene, mesh, image, material, shader, or pipeline formats;
 - physical memory totals, a global singleton, or raw manager back-pointers.
 
-New API is admitted only when the examples, public contract tests, and the 0.14
-consumer require it.
+New API is admitted only when a demonstrated consumer, examples, and public
+contract tests require it.
 
-## Release construction
+## Delivery plan
 
-The 0.13 series deliberately mirrors the evidence order demonstrated by
-`slot-graph`: 0.13.0 freezes this architecture and the crate boundary; 0.13.1
-adds numbered examples, public-only contract tests, and declarations; 0.13.2
-implements those frozen contracts; 0.13.3 adds representative benchmarks and a
-reproducible baseline/decision. A 0.13.4 exists only if independent review
-finds a material contract or evidence defect.
+Asset work follows an evidence order: first freeze the architecture and crate
+boundary; then add numbered examples, public-only contract tests, and API
+declarations; implement those contracts; and finally record representative
+benchmarks and a reproducible baseline decision. Independent review may add a
+bounded correction when it finds a material contract or evidence defect.

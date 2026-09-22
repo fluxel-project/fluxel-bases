@@ -1,26 +1,27 @@
-# fluxel-assets 0.13.3 baseline and decision
+# fluxel-assets baseline and decision
 
-> 0.13.4 review note: the formal baseline below remains unchanged. The
-> user-requested slot/lock cross-test and its reproducible rejected-candidate
-> bundles are recorded in the final section.
+> Review note: the formal baseline below remains unchanged. The requested
+> slot/lock cross-test and its reproducible rejected-candidate bundles are
+> recorded in the final section.
 
 ## Decision
 
-Retain the 0.13.2 implementation unchanged for 0.13.3. The representative
-prepared-asset workload is allocation-free and its three timing rounds are
-stable enough to establish a baseline. No observed cost currently justifies a
-more complex synchronization or storage design, so this release adds evidence
-and regression workloads without speculative optimization.
+Retain the measured implementation. The representative prepared-asset workload
+is allocation-free and its three timing rounds are stable enough to establish a
+baseline. No observed cost currently justifies a more complex synchronization
+or storage design, so this milestone records evidence and regression workloads
+without speculative optimization.
 
 This is an **Accepted baseline**, not an assertion that the implementation is
-globally optimal. The benchmark models the CPU asset contract only; 0.14 must
-measure the rendering-residency consumer before it can motivate a candidate.
+globally optimal. The benchmark models the CPU asset contract only; rendering
+residency must be measured independently before it can motivate a candidate.
 
 ## Exact source and environment
 
 - Benchmark source revision: `ed992a7af4a08415f2044a46c9ff6d5edad7485b`
-- Final release differs from that revision only by these recorded result files
-  and release documentation; benchmark and library sources are unchanged.
+- The retained source differs from that revision only by these recorded result
+  files and accompanying documentation; benchmark and library sources are
+  unchanged.
 - Toolchain: `rustc 1.98.0 (88d9e12ae 2026-08-18)`, Cargo 1.98.0,
   `x86_64-pc-windows-msvc`.
 - OS: Microsoft Windows 11 Home Chinese, version 10.0.26200, build 26200.
@@ -41,7 +42,7 @@ saved Criterion baselines:
 ```console
 cargo +stable bench -p fluxel-assets --bench asset_store --locked -- \
   --warm-up-time 1 --measurement-time 2 --sample-size 30 \
-  --save-baseline v0.13.3-roundN
+  --save-baseline asset-store-roundN
 ```
 
 Allocation command, three adjacent rounds:
@@ -55,8 +56,8 @@ Benchmark smoke was run separately with Criterion `--test` and one allocation
 iteration. Smoke numbers were not included in the decision. Criterion estimates
 are nanoseconds per full workload invocation and report 95% confidence
 intervals. Durable summaries are in
-[`0.13.3-timings.csv`](0.13.3-timings.csv) and
-[`0.13.3-allocations.csv`](0.13.3-allocations.csv).
+[`timings.csv`](0.13.3-timings.csv) and
+[`allocations.csv`](0.13.3-allocations.csv).
 
 ## Representative results
 
@@ -101,12 +102,12 @@ a process-memory total.
 All 24 correctness tests, including real two-thread producer election,
 exact-attempt waiter completion, stale recycling, replacement failure/cancel,
 deterministic collection, and reentrant destructor lock boundaries, remained
-green. Stable/MSRV, Clippy, docs, examples, and benchmark smoke are release
+green. Stable/MSRV, Clippy, docs, examples, and benchmark smoke are delivery
 gates and are recorded separately from timing evidence.
 
 ## Experiment record
 
-ID and status: `E-0133-01 — Deferred`
+ID and status: `asset-store-sync — Deferred`
 
 - Hypothesis: sharding or read-optimized synchronization might reduce hot
   lookup contention.
@@ -117,7 +118,7 @@ ID and status: `E-0133-01 — Deferred`
 - Decision: do not implement or A/B a candidate. Additional locks, shards, or
   unsafe machinery would add semantic and maintenance risk without an observed
   representative benefit.
-- Retest condition: 0.14 residency profiling shows sustained multi-threaded
+- Retest condition: residency profiling shows sustained multi-threaded
   frame-preparation contention, or a stable consumer benchmark demonstrates a
   material regression against this baseline.
 
@@ -125,14 +126,13 @@ No candidate code was retained or rejected in this campaign. Profiling was not
 used to invent an attribution because the representative measurement did not
 identify a cost requiring an optimization hypothesis.
 
-### User-requested lock and slot cross-test
+### Requested lock and slot cross-test
 
-The 0.13.4 review pass added a bounded cross-test without rewriting the formal
-0.13.3 baseline. It used the same primary workload in an interleaved rapid
-screen: 0.5 second warm-up, 1 second measurement, 20 Criterion samples, and the
-sequence baseline/Mutex/RwLock/RwLock/Mutex/baseline/Mutex/baseline/RwLock.
-Durable estimates are in
-[`0.13.4-lock-cross-test.csv`](0.13.4-lock-cross-test.csv).
+The review pass added a bounded cross-test without rewriting the formal
+baseline. It used the same primary workload in an interleaved rapid screen: 0.5
+second warm-up, 1 second measurement, 20 Criterion samples, and the sequence
+baseline/Mutex/RwLock/RwLock/Mutex/baseline/Mutex/baseline/RwLock. Durable
+estimates are in [`lock-cross-test.csv`](0.13.4-lock-cross-test.csv).
 
 The rapid screen used the same machine, OS, power scheme, toolchain, allocator,
 and primary workload recorded above. Every timed sample used:
@@ -153,7 +153,7 @@ above after each lock candidate. The CSV `sequence` column records the actual
 interleaved measurement order. These bundles are evidence only and are not
 production dependencies.
 
-ID and status: `E-0133-02 — Rejected before timing`
+ID and status: `slot-store-replacement — Rejected before timing`
 
 - Candidate: exact `slotmap = 1.0.7` replacing the hand-rolled slot store.
 - Static and correctness evidence: `SlotMap` reuses the head of its internal
@@ -167,7 +167,7 @@ ID and status: `E-0133-02 — Rejected before timing`
 - Decision: reject before timing. A diagnostic speed cannot override identity,
   stale-handle, and deterministic-recycle correctness.
 
-ID and status: `E-0133-03 — Rejected`
+ID and status: `parking-mutex — Rejected`
 
 - Candidate: exact `parking_lot = 0.12.5`, drop-in `parking_lot::Mutex`, local
   experiment revision `297ffe3e04fed5c65932722d92b84d1a134df48d`.
@@ -184,7 +184,7 @@ ID and status: `E-0133-03 — Rejected`
   semantic and dependency cost.
 - Decision: reject; no candidate code retained and no formal validation run.
 
-ID and status: `E-0133-04 — Rejected`
+ID and status: `parking-rwlock — Rejected`
 
 - Candidate: `parking_lot::RwLock` plus atomic last-touch tickets and true read
   fast paths for ready/failed/producing `acquire` and `observe`, local experiment
