@@ -21,7 +21,7 @@ caller-owned source/loader policy
         fluxel-assets
               |
               v
-rendering frame preparation -> RHI / RenderGraph
+rendering frame preparation -> FramePipeline -> RenderGraph -> RHI
 ```
 
 `fluxel-assets` remains a leaf crate. It does not depend on Rendering, Host,
@@ -190,12 +190,13 @@ rendering-owned key:
 ```
 
 Rendering resolves that key to a persistent GPU realization before graph
-execution and supplies the prepared resource through its private bridge. A
-render pass does not look up an asset store. Submission completion, last GPU
-use, upload commit, retirement, and device-loss recreation remain
-Rendering/RHI concerns. Device loss invalidates device-specific realizations;
-the logical snapshot and its content generation remain available to rebuild
-them for the next device generation.
+execution. FramePipeline uses the prepared RHI portable resources directly
+while constructing RenderGraph passes and their bindings; RenderGraph records
+work through the RHI portable API. A render pass does not look up an asset
+store. Submission completion, last GPU use, upload commit, retirement, and
+device-loss recreation remain Rendering/RHI concerns. Device loss invalidates
+device-specific realizations; the logical snapshot and its content generation
+remain available to rebuild them for the next device generation.
 
 ## Non-goals
 
