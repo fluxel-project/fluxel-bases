@@ -45,6 +45,12 @@ The design deliberately separates identities that are often conflated:
 GPU resource identity and device generation form a fourth, separate domain
 owned by Rendering. They never appear in this crate's key or state.
 
+Domain APIs must preserve this boundary. For example, a material payload may
+be typed with a material marker and referred to as `AssetId<Material>`, but it
+must not introduce a second logical `MaterialAssetId` or an independent
+material-generation counter. A renderer can add realization metadata to the
+existing logical identity and content generation; it cannot replace them.
+
 ## Typed identity and ownership
 
 An `AssetKind` marker prevents a mesh handle from being used as an image

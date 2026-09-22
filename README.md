@@ -20,6 +20,13 @@ Expected ownership includes:
 - portable image data and codec-facing contracts; and
 - small shared byte, encoding, identity, and value utilities.
 
+`fluxel-assets` is the single owner of logical asset identity. Domain crates may
+define asset payloads such as meshes, images, or materials, but reference them
+through `AssetId<K>` and the associated content generation instead of creating
+parallel `MeshId`, `ImageId`, or `MaterialAssetId` systems. Those payloads are
+not GPU objects; a renderer may derive a device-specific realization from the
+logical identity and generation.
+
 ## Non-scope
 
 `fluxel-bases` does not own GPU residency, texture upload, render passes,
@@ -28,8 +35,11 @@ or platform log sinks. It does not write to a browser console, file, logcat, or
 `os_log`; hosts and language adapters provide those endpoints.
 
 Asset identity and lifecycle belong here, while GPU-specific upload, residency,
-and retirement remain rendering concerns. Diagnostics schemas and routers belong
-here, while final output sinks remain host or language-adapter concerns.
+and retirement remain rendering concerns. Logical identity is intentionally
+separate from source/loader identity and from GPU resource identity, so a path,
+URL, or device handle cannot become a second asset key. Diagnostics schemas and
+routers belong here, while final output sinks remain host or language-adapter
+concerns.
 
 ## Dependencies
 
