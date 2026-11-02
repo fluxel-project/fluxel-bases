@@ -1,26 +1,18 @@
 //! OS-thread single-flight and destructor re-entrancy regression gates.
 
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::{Arc, Barrier, mpsc};
-use std::task::{Context, Poll, Waker};
+use std::task::Poll;
 use std::thread;
 use std::time::Duration;
 
-use fluxel_assets::{
-    Acquire, AssetKind, AssetStore, ProductionOutcome, ProductionWaiter, ResidentBytes,
-};
+#[path = "support/poll.rs"]
+mod poll;
+
+use fluxel_assets::{Acquire, AssetKind, AssetStore, ProductionOutcome, ResidentBytes};
+use poll::poll_waiter;
 
 struct Concurrent;
 impl AssetKind for Concurrent {}
-
-fn poll_waiter<K: AssetKind, V, E>(
-    waiter: &mut ProductionWaiter<K, V, E>,
-) -> Poll<Result<ProductionOutcome<K, V, E>, fluxel_assets::AssetError>> {
-    let waker = Waker::noop();
-    let mut context = Context::from_waker(waker);
-    Pin::new(waiter).poll(&mut context)
-}
 
 #[test]
 fn concurrent_acquire_has_exactly_one_producer_and_one_waiter() {

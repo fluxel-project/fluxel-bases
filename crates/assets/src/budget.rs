@@ -20,7 +20,11 @@ impl ResidentBytes {
     }
 }
 
-/// Maximum current ready bytes retained by the store after collection.
+/// Target for current store-owned ready bytes after explicit collection.
+///
+/// Pinned content or active production may leave the store above this target.
+/// External snapshots, shared buffers, temporary work, and allocation overhead
+/// are not a process-wide memory limit enforced by this value.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct CacheBudget {
     max_resident_bytes: u64,

@@ -1,24 +1,17 @@
 //! Resident-byte overflow must finish the exact producer attempt before retry.
 
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll, Waker};
+use std::task::Poll;
+
+#[path = "support/poll.rs"]
+mod poll;
 
 use fluxel_assets::{
-    Acquire, AssetError, AssetKind, AssetObservation, AssetStore, ProductionOutcome,
-    ProductionWaiter, ResidentBytes,
+    Acquire, AssetError, AssetKind, AssetObservation, AssetStore, ProductionOutcome, ResidentBytes,
 };
+use poll::poll_waiter;
 
 struct LargeAsset;
 impl AssetKind for LargeAsset {}
-
-fn poll_waiter<K: AssetKind, V, E>(
-    waiter: &mut ProductionWaiter<K, V, E>,
-) -> Poll<Result<ProductionOutcome<K, V, E>, AssetError>> {
-    let waker = Waker::noop();
-    let mut context = Context::from_waker(waker);
-    Pin::new(waiter).poll(&mut context)
-}
 
 #[test]
 fn overflowed_commit_cancels_its_exact_attempt_and_leaves_retryable_missing_state() {

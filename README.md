@@ -60,6 +60,19 @@ failed-completion lifecycle correction. See the accepted
 [architecture](documents/design-assets.md), [performance plan](documents/performance-plan.md),
 and [recorded baseline](documents/performance/asset-store-baseline.md).
 
+The `07_file_loader` example is a caller-owned file consumer of the asset
+contract. It demonstrates source keys, producer/waiter sharing, bounded loading,
+and explicit blocking on a thread where the caller can guarantee progress:
+
+```console
+cargo run -p fluxel-assets --example 07_file_loader -- <input> [output]
+```
+
+The example's filesystem and scheduling policy is not a public loader API or a
+process-wide memory limit. In particular it does not resolve symlink aliases,
+watch for changes, guarantee same-length concurrent file writes are consistent,
+or identify every context where blocking a thread would deadlock.
+
 GPU residency remains owned by `fluxel-rendering`. It consumes a logical asset
 identity plus immutable content generation to select a device-specific
 realization, but it owns upload, GPU lifetime, completion-safe retirement, and

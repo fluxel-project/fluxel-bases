@@ -21,8 +21,8 @@ type AttemptResult<K, V, E> = Result<ProductionOutcome<K, V, E>, AssetError>;
 ///
 /// Each [`ProductionWaiter`] owns exactly one slot for its whole lifetime, so
 /// clones and repeated polls never share storage and dropping one waiter can
-/// only release its own registered waker. The registry never runs waiter or
-/// executor code while a slot is locked; `wake` happens strictly outside.
+/// only release its own registered waker. Waker clone, drop, and wake may all
+/// run executor code, so each happens strictly outside this slot's lock.
 struct WakerSlot {
     waker: Mutex<Option<Waker>>,
 }
@@ -36,16 +36,42 @@ impl WakerSlot {
 
     /// Stores `waker` unless the slot already holds an equivalent waker.
     fn record(&self, waker: &Waker) {
-        let mut current = match self.waker.lock() {
-            Ok(current) => current,
-            Err(poisoned) => poisoned.into_inner(),
+        let matches_current = {
+            let current = match self.waker.lock() {
+                Ok(current) => current,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            current
+                .as_ref()
+                .is_some_and(|existing| existing.will_wake(waker))
         };
-        if !current
-            .as_ref()
-            .is_some_and(|existing| existing.will_wake(waker))
-        {
-            *current = Some(waker.clone());
+        if matches_current {
+            return;
         }
+
+        // RawWaker clone is executor-defined code. It must not run under the
+        // slot lock because it may synchronously complete this attempt.
+        let replacement = waker.clone();
+        let displaced = {
+            let mut current = match self.waker.lock() {
+                Ok(current) => current,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            if current
+                .as_ref()
+                .is_some_and(|existing| existing.will_wake(waker))
+            {
+                None
+            } else {
+                Some(current.replace(replacement))
+            }
+        };
+
+        // Dropping a RawWaker is executor-defined code as well. In particular,
+        // the last reference can drop a task that cancels its producer permit.
+        // Both the replaced and redundant Wakers therefore leave scope only
+        // after the slot mutex is released.
+        drop(displaced);
     }
 
     /// Takes the registered waker, if any.
@@ -54,7 +80,9 @@ impl WakerSlot {
             Ok(current) => current,
             Err(poisoned) => poisoned.into_inner(),
         };
-        current.take()
+        let waker = current.take();
+        drop(current);
+        waker
     }
 }
 

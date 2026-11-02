@@ -86,3 +86,38 @@ fn failed_replacement_keeps_previous_bytes_accounted_until_collection() {
     assert_eq!(report.evicted().len(), 1);
     assert_eq!(report.evicted()[0].id(), id);
 }
+
+#[test]
+fn pinned_generations_report_budget_shortfall_and_external_values_outlive_accounting() {
+    let store = AssetStore::<Blob, Vec<u8>, String>::new();
+    let handle = store.create().unwrap();
+    let old = match store.acquire(&handle).unwrap() {
+        Acquire::Producer(permit) => permit.commit(vec![1; 5], ResidentBytes::new(5)).unwrap(),
+        _ => panic!("new identity must nominate producer"),
+    };
+    let old_value = old.value_arc();
+    let replacement = match store.request_replacement(&handle).unwrap() {
+        fluxel_assets::Production::Producer(permit) => permit,
+        _ => panic!("replacement must nominate producer"),
+    };
+    let current = replacement
+        .commit(vec![2; 7], ResidentBytes::new(7))
+        .unwrap();
+    let current_value = current.value_arc();
+
+    let report = store.collect(CacheBudget::new(2)).unwrap();
+    assert_eq!(report.before_bytes(), ResidentBytes::new(7));
+    assert_eq!(report.after_bytes(), ResidentBytes::new(7));
+    assert_eq!(report.after_bytes().get() - 2, 5);
+    assert!(report.evicted().is_empty());
+    assert_eq!(old.value(), &[1; 5]);
+
+    drop(old);
+    drop(current);
+    drop(handle);
+    let report = store.collect(CacheBudget::new(0)).unwrap();
+    assert_eq!(report.after_bytes(), ResidentBytes::new(0));
+    assert_eq!(report.evicted().len(), 1);
+    assert_eq!(old_value.as_slice(), &[1; 5]);
+    assert_eq!(current_value.as_slice(), &[2; 7]);
+}

@@ -68,7 +68,10 @@ where
         self.inner.remove(id)
     }
 
-    /// Deterministically evicts eligible ready content to the fixed budget.
+    /// Deterministically evicts eligible ready content toward the budget.
+    ///
+    /// The returned byte count may remain above the target when retained
+    /// content is pinned or belongs to an active production attempt.
     pub fn collect(&self, budget: CacheBudget) -> Result<CollectReport<K>, AssetError> {
         self.inner.collect(budget)
     }

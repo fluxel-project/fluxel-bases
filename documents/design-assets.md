@@ -34,15 +34,20 @@ The design deliberately separates identities that are often conflated:
 1. **Logical asset identity** identifies the user-visible asset across content
    replacements. It is a typed slot plus a slot generation. Recycling a slot
    creates a different identity; stale identities fail closed.
-2. **Content generation** identifies one atomically committed immutable value
-   for a logical identity. It advances only after a successful commit or
-   replacement. Existing snapshots keep the generation they observed.
+2. **Content generation** identifies one atomically committed value for a
+   logical identity. It advances only after a successful commit or
+   replacement. Existing snapshots keep the generation and `Arc<V>` they
+   observed. The store never mutates or replaces that `Arc<V>` in place;
+   callers that put interior mutability in `V` remain responsible for its
+   semantics and must publish cache-significant changes as a replacement.
 3. **Source or loader identity** belongs to the caller. A path, URL, embedded
    key, decoder request, or generated-data recipe is neither accepted nor
    interpreted by this crate.
 
-GPU resource identity and device generation form a fourth, separate domain
-owned by Rendering. They never appear in this crate's key or state.
+GPU resource identity and selected-RHI device provenance form a fourth,
+separate domain owned by Rendering. They never appear in this crate's key or
+state. A backend may privately track native-handle generations, but a public
+generation component is added only when the selected RHI contract exposes one.
 
 Domain APIs must preserve this boundary. Geometry and material handles are
 conceptual typed logical references, not an invitation to mint a renderer-local
@@ -127,8 +132,9 @@ but owns no thread, queue, timer, executor, I/O operation, or scheduling policy.
 Ready content with no external strong logical users becomes a cache candidate;
 it is not destroyed immediately. The producer reports resident bytes on every
 successful commit. The store accounts only bytes retained by its current
-committed cache values. Bytes retained solely by old external snapshots are
-owned and accounted by those consumers, not silently charged to the store.
+committed cache values. Bytes retained solely by old external snapshots or a
+caller-cloned value `Arc` are owned and accounted by those consumers, not
+silently charged to the store.
 
 Collection is explicit. Given a fixed `CacheBudget`, it:
 
@@ -145,18 +151,21 @@ content and pinned/live content are never collected. Collection does not
 recycle logical identity; explicit removal may recycle an empty identity only
 after the strong-user and producer checks pass.
 
-The budget is a deterministic policy boundary, not a claim that all process
-memory is measured. Allocator overhead, caller-owned snapshots, loader buffers,
-decoded intermediates, and GPU allocations lie outside it.
+The budget is a deterministic policy boundary, not a reservation or hard limit
+on process memory. Pinned content, active production, caller-owned snapshots
+and value `Arc`s can leave retained memory above the requested budget.
+Allocator overhead, loader buffers, decoded intermediates, and GPU allocations
+also lie outside it.
 
 ## Concurrency and atomicity
 
 The store is safe to share across threads. A short store-owned lock serializes
 identity allocation, state transitions, waker registration, byte accounting,
 and collection decisions. Producers perform source work outside that lock.
-Committed values and failures are shared immutably. User destructors are never
-run while the store lock is held: replaced or evicted values are moved to a
-retirement list and dropped after unlock.
+Committed values and failures are shared immutably. User destructors and Waker
+clone/drop operations are never run while a store or waiter-registration lock
+is held: replaced or evicted values are moved to a retirement list and dropped
+after unlock, and Waker ownership is exchanged before external operations.
 
 The contract favors simple, auditable synchronization over speculative
 lock-free machinery. Poisoning is converted to a structured closed/poisoned
@@ -182,12 +191,17 @@ effect.
 
 ## Rendering handoff
 
-Frame preparation may obtain an immutable snapshot and construct the
-rendering-owned key:
+Frame preparation may obtain an immutable snapshot and construct a
+rendering-owned key from:
 
 ```text
-(AssetId<K>, ContentGeneration, DeviceIdentity, DeviceGeneration)
+(AssetId<K>, ContentGeneration, selected RHI device provenance)
 ```
+
+The current selected RHI baseline exposes that provenance as `DeviceId`. A
+renderer-private key adds a device-generation component only when the selected
+RHI contract actually exposes that fact; `fluxel-assets` neither creates nor
+requires a public `DeviceGeneration` field.
 
 Rendering resolves that key to a persistent GPU realization before graph
 execution. FramePipeline uses the prepared RHI portable resources directly
@@ -196,7 +210,7 @@ work through the RHI portable API. A render pass does not look up an asset
 store. Submission completion, last GPU use, upload commit, retirement, and
 device-loss recreation remain Rendering/RHI concerns. Device loss invalidates
 device-specific realizations; the logical snapshot and its content generation
-remain available to rebuild them for the next device generation.
+remain available to rebuild them for the next selected device provenance.
 
 ## Non-goals
 
@@ -207,13 +221,34 @@ This crate does not define:
   policy;
 - an executor, worker pool, async runtime, application lifecycle, or blocking
   I/O abstraction;
-- GPU objects, upload commands, device generation, residency, retirement, or
+- GPU objects, upload commands, device provenance/generation, residency, retirement, or
   RenderGraph resources;
 - scene, mesh, image, material, shader, or pipeline formats;
 - physical memory totals, a global singleton, or raw manager back-pointers.
 
 New API is admitted only when a demonstrated consumer, examples, and public
 contract tests require it.
+
+## File-consumer example
+
+`crates/assets/examples/07_file_loader.rs` exercises a caller-owned source
+directory and file-loading policy. A source path plus a caller-selected variant
+maps to a weak logical identity; acquiring that identity joins the existing
+production attempt. A producer reads the source and publishes the result, and
+both an async waiter and an explicitly blocking waiter can observe the same
+attempt. The caller remains responsible for ensuring a blocked thread is not
+needed to make production progress; its explicit blocking policy can reject a
+wait before polling. Caller-owned counters report request and production
+outcomes, but their independently sampled fields are not a transactional view.
+
+The example reserves a task slot before opening the file and then reserves the
+reported source length. Its byte reservation is logical accounting, not a cap
+on allocator overhead or other process memory. It rejects observed source-size
+changes while reading but cannot provide a consistent snapshot of concurrent
+same-length writes. Path keys preserve `..` components and do not resolve
+symlinks. `forget` removes the key only after the logical store accepts removal;
+active users or production reject that removal. These are example policies,
+not newly stabilized `fluxel-assets` or generic loader APIs.
 
 ## Delivery plan
 

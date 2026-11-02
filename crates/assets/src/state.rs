@@ -29,6 +29,10 @@ impl AttemptGeneration {
 }
 
 /// Immutable ownership of one exact committed content generation.
+///
+/// This preserves the published `Arc<V>`, but cannot prevent mutation through
+/// interior-mutability types inside `V`. Callers using the content generation
+/// as a cache key must publish semantic content changes through replacement.
 pub struct AssetSnapshot<K: AssetKind, V> {
     pub(crate) handle: AssetHandle<K>,
     pub(crate) generation: ContentGeneration,

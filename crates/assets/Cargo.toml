@@ -19,3 +19,15 @@ harness = false
 [[bench]]
 name = "allocations"
 harness = false
+
+[[bench]]
+name = "concurrent_store"
+harness = false
+
+[[bench]]
+name = "file_consumer"
+harness = false
+
+[[bench]]
+name = "waiter_fanout"
+harness = false

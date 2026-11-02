@@ -1,23 +1,15 @@
 //! Exact-attempt waiter completion and store-closure contracts.
 
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll, Waker};
+use std::task::Poll;
 
-use fluxel_assets::{
-    Acquire, AssetError, AssetKind, AssetStore, ProductionOutcome, ProductionWaiter, ResidentBytes,
-};
+#[path = "support/poll.rs"]
+mod poll;
+
+use fluxel_assets::{Acquire, AssetError, AssetKind, AssetStore, ProductionOutcome, ResidentBytes};
+use poll::poll_waiter;
 
 struct Texture;
 impl AssetKind for Texture {}
-
-fn poll_waiter<K: AssetKind, V, E>(
-    waiter: &mut ProductionWaiter<K, V, E>,
-) -> Poll<Result<ProductionOutcome<K, V, E>, AssetError>> {
-    let waker = Waker::noop();
-    let mut context = Context::from_waker(waker);
-    Pin::new(waiter).poll(&mut context)
-}
 
 #[test]
 fn waiter_observes_the_exact_committed_attempt() {
