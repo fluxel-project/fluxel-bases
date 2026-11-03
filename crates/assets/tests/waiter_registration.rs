@@ -240,6 +240,11 @@ struct CancelProducerOnDrop {
     producer: Mutex<Option<ProducerPermit<Texture, Vec<u8>, String>>>,
 }
 
+#[allow(
+    unknown_lints,
+    clippy::manual_noop_waker,
+    reason = "the Waker must retain this value so its Drop implementation can cancel the producer"
+)]
 impl Wake for CancelProducerOnDrop {
     fn wake(self: Arc<Self>) {}
 }
@@ -256,12 +261,6 @@ impl Drop for CancelProducerOnDrop {
             .cancel()
             .expect("reentrant cancellation must complete the active attempt");
     }
-}
-
-struct NoopWake;
-
-impl Wake for NoopWake {
-    fn wake(self: Arc<Self>) {}
 }
 
 /// State behind a RawWaker whose clone callback cancels the active producer.
@@ -335,8 +334,7 @@ fn replacing_a_waker_allows_reentrant_producer_cancellation() {
         assert!(matches!(poll_waiter(&mut waiter, &first), Poll::Pending));
         drop(first);
 
-        let replacement = Waker::from(Arc::new(NoopWake));
-        let result = poll_waiter(&mut waiter, &replacement);
+        let result = poll_waiter(&mut waiter, Waker::noop());
         sent.send(matches!(
             result,
             Poll::Ready(Ok(ProductionOutcome::Cancelled { .. }))

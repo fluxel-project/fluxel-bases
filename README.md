@@ -94,3 +94,17 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-targets --all-features --locked
 cargo doc --workspace --all-features --no-deps --locked
 ```
+
+### Toolchain compatibility maintenance
+
+The current Stable compatibility maintenance pass used Rust 1.98.0 and the
+Rust 1.87.0 MSRV. Stable Clippy passed for all `fluxel-assets` targets with warnings denied;
+the MSRV passed the waiter-registration Clippy target and its eight regression
+tests. The pass replaced the test-only no-op `Wake` implementation with
+`Waker::noop()` and retained the drop-driven cancellation waker with a
+documented, narrow lint allowance because its destructor is the behavior under
+test.
+
+`AtomicU64::fetch_update` remains the store-identity allocator. Both toolchains
+compiled that path without a deprecation diagnostic, so no speculative atomic
+algorithm change was made.
