@@ -79,6 +79,15 @@ realization, but it owns upload, GPU lifetime, completion-safe retirement, and
 device-loss recovery. A content generation is neither a GPU-residency version
 nor a device generation.
 
+## Rendering consumer evidence
+
+Rendering's accepted bounded S6 MVP continues to consume the unchanged Bases
+revision `ee640d5`. Its external typed Feature fixture exercises logical asset
+replacement while Rendering retains GPU upload, residency and retirement
+ownership. The [S6 closure record](https://github.com/fluxel-project/fluxel-rendering/blob/c163db2362154fbb75289a6a5263312b69350d1e/documents/s6-typed-forward-closure.md)
+is consumer evidence only; it does not broaden this repository's shared
+contract or complete S7/S8.
+
 New crates still require a reviewed, demonstrated need rather than a reserved
 name alone. Ecosystem stages, ownership, and extraction gates are maintained in
 the [Fluxel roadmap](https://github.com/fluxel-project/.github/blob/main/ROADMAP.md)
