@@ -81,12 +81,14 @@ nor a device generation.
 
 ## Rendering consumer evidence
 
-Rendering's accepted bounded S6 MVP continues to consume the unchanged Bases
-revision `ee640d5`. Its external typed Feature fixture exercises logical asset
-replacement while Rendering retains GPU upload, residency and retirement
-ownership. The [S6 closure record](https://github.com/fluxel-project/fluxel-rendering/blob/c163db2362154fbb75289a6a5263312b69350d1e/documents/s6-typed-forward-closure.md)
-is consumer evidence only; it does not broaden this repository's shared
-contract or complete S7/S8.
+Rendering's bounded S7/S8 consumer result continues to consume the unchanged
+Bases revision `ee640d5` for logical asset identity and content generation.
+The [S7 historical closure](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/s7-deferred-closure.md)
+and [S8 measured closure](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/s8-measured-closure.md)
+exercise replacement generations while Rendering retains GPU upload, residency,
+completion, device-loss, and retirement ownership. This is consumer evidence
+only: it neither adds GPU objects to Bases nor turns the asset cache into a
+GPU-memory budget.
 
 New crates still require a reviewed, demonstrated need rather than a reserved
 name alone. Ecosystem stages, ownership, and extraction gates are maintained in
