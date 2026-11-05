@@ -276,11 +276,21 @@ pub(crate) struct StoreInner<K: AssetKind, V, E> {
 
 impl<K: AssetKind, V, E> StoreInner<K, V, E> {
     pub(crate) fn new() -> Self {
-        let id = NEXT_STORE_ID
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |next| {
-                next.checked_add(1)
-            })
-            .unwrap_or_else(|_| panic!("fluxel-assets store identity space exhausted"));
+        let mut id = NEXT_STORE_ID.load(Ordering::Relaxed);
+        loop {
+            let next = id
+                .checked_add(1)
+                .unwrap_or_else(|| panic!("fluxel-assets store identity space exhausted"));
+            match NEXT_STORE_ID.compare_exchange_weak(
+                id,
+                next,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(observed) => id = observed,
+            }
+        }
         Self {
             id,
             state: Mutex::new(StoreState {

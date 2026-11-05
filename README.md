@@ -108,14 +108,14 @@ cargo doc --workspace --all-features --no-deps --locked
 
 ### Toolchain compatibility maintenance
 
-The current Stable compatibility maintenance pass used Rust 1.98.0 and the
-Rust 1.87.0 MSRV. Stable Clippy passed for all `fluxel-assets` targets with warnings denied;
-the MSRV passed the waiter-registration Clippy target and its eight regression
-tests. The pass replaced the test-only no-op `Wake` implementation with
-`Waker::noop()` and retained the drop-driven cancellation waker with a
+Rust 1.99 deprecated `AtomicU64::fetch_update` in favor of `try_update`, but
+the latter is unavailable on the Rust 1.87 MSRV. The store-identity allocator
+therefore uses a relaxed compare-exchange loop: it returns the successfully
+claimed value, retries after contention, and fails closed on `u64` exhaustion.
+This keeps the existing unique-store identity and foreign-handle rejection
+contract available to both toolchains.
+
+The same compatibility pass replaced the test-only no-op `Wake` implementation
+with `Waker::noop()` and retained the drop-driven cancellation waker with a
 documented, narrow lint allowance because its destructor is the behavior under
 test.
-
-`AtomicU64::fetch_update` remains the store-identity allocator. Both toolchains
-compiled that path without a deprecation diagnostic, so no speculative atomic
-algorithm change was made.
