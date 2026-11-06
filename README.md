@@ -83,14 +83,14 @@ nor a device generation.
 
 Rendering's historical bounded S7/S8 consumer result consumed
 Bases revision `ee640d5` for logical asset identity and content generation.
-The [S7 historical closure](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/s7-deferred-closure.md)
-and [S8 measured closure](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/s8-measured-closure.md)
+The [S7 historical closure](https://github.com/fluxel-project/fluxel-rendering/blob/c24f9adf17cfd12ed2bc3035f45cd1f477879afc/documents/s7-deferred-closure.md)
+and [S8 measured closure](https://github.com/fluxel-project/fluxel-rendering/blob/c24f9adf17cfd12ed2bc3035f45cd1f477879afc/documents/s8-measured-closure.md)
 exercise replacement generations while Rendering retains GPU upload, residency,
 completion, device-loss, and retirement ownership. This is consumer evidence
 only: it neither adds GPU objects to Bases nor turns the asset cache into a
 GPU-memory budget.
 
-The subsequent [Rendering maintenance review](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/review-follow-up.md#current-maintenance-review)
+The subsequent [Rendering maintenance review](https://github.com/fluxel-project/fluxel-rendering/blob/c24f9adf17cfd12ed2bc3035f45cd1f477879afc/documents/review-follow-up.md#current-maintenance-review)
 selects Bases `124e825` for the Stable/MSRV identity-allocation fix described
 below. Updated consumer manifests and lockfiles have separate CPU validation;
 the historical native archives keep their original `ee640d5` identity.
