@@ -90,7 +90,7 @@ completion, device-loss, and retirement ownership. This is consumer evidence
 only: it neither adds GPU objects to Bases nor turns the asset cache into a
 GPU-memory budget.
 
-The subsequent [Rendering maintenance review](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/s0-s8-review-follow-up.md)
+The subsequent [Rendering maintenance review](https://github.com/fluxel-project/fluxel-rendering/blob/main/documents/review-follow-up.md#current-maintenance-review)
 selects Bases `124e825` for the Stable/MSRV identity-allocation fix described
 below. Updated consumer manifests and lockfiles have separate CPU validation;
 the historical native archives keep their original `ee640d5` identity.
